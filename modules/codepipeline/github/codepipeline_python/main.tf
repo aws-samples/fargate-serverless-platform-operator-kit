@@ -15,7 +15,7 @@ data "aws_iam_policy" "ecs_full_access" {
 }
 
 resource "aws_iam_role" "codepipeline_role" {
-  name               = "${var.repository_name}-github-pipeline-role"
+  name               = "${var.repository_name}-pipeline-role"
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -180,11 +180,6 @@ resource "aws_iam_role_policy" "codebuild_step_policy" {
       "Effect": "Allow",
       "Action": "codestar-connections:UseConnection",
       "Resource": "${var.code_star_connection_arn}"
-    },
-    {
-      "Effect": "Allow",
-      "Action": "secretsmanager:GetSecretValue",
-      "Resource": "arn:aws:secretsmanager:${var.aws_region}:${var.account_id}:secret:${var.dockerhub_secret_name}*"
     }
   ]
 }
@@ -474,23 +469,13 @@ resource "aws_codebuild_project" "safety" {
     buildspec = <<EOF
 version: 0.2
 phases:
-  pre_build:
+  install:
     commands:
-      - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+      - pip3 install -r requirements.txt
+      - pip3 install -r requirements-dev.txt
   build:
-    steps:
-      - name: Main requirements vulnerabilities scan
-        uses: aufdenpunkt/python-safety-check@master
-        with:
-          scan_requirements_file_only: 'true'
-        env:
-          DEP_PATH: "requirements.txt"
-      - name: Dev requirements vulnerabilities scan
-        uses: aufdenpunkt/python-safety-check@master
-        with:
-          scan_requirements_file_only: 'true'
-        env:
-          DEP_PATH: "requirements-dev.txt"
+    commands:
+      - find requirements*.txt -execdir safety check -r {} \;
 EOF
   }
 
@@ -502,19 +487,6 @@ EOF
     compute_type    = var.build_compute_type
     image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = true
-
-    environment_variable {
-      name  = "DOCKER_USERNAME"
-      value = "${var.dockerhub_secret_name}:username"
-      type  = "SECRETS_MANAGER"
-    }
-
-    environment_variable {
-      name  = "DOCKER_PASSWORD"
-      value = "${var.dockerhub_secret_name}:password"
-      type  = "SECRETS_MANAGER"
-    }
   }
 }
 
@@ -536,12 +508,13 @@ resource "aws_codebuild_project" "bandit" {
     buildspec = <<EOF
 version: 0.2
 phases:
-  pre_build:
+  install:
     commands:
-      - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
+      - pip3 install -r requirements.txt
+      - pip3 install -r requirements-dev.txt
   build:
-    steps:
-      - uses: jpetrucciani/bandit-check@main
+    commands:
+      - bandit -r .
 EOF
   }
 
@@ -553,19 +526,6 @@ EOF
     compute_type    = var.build_compute_type
     image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = true
-
-    environment_variable {
-      name  = "DOCKER_USERNAME"
-      value = "${var.dockerhub_secret_name}:username"
-      type  = "SECRETS_MANAGER"
-    }
-
-    environment_variable {
-      name  = "DOCKER_PASSWORD"
-      value = "${var.dockerhub_secret_name}:password"
-      type  = "SECRETS_MANAGER"
-    }
   }
 }
 
@@ -596,12 +556,11 @@ phases:
       - make install
       - cd .. && rm -rf $SECRETS_FOLDER
   build:
-    steps:
-      - name: git-secrets scan
-        run: |
-          git secrets --register-aws
-          git secrets --scan
-          echo "No vulnerabilites detected. Have a nice day!"
+    commands:
+      #- git secrets --install
+      - git secrets --register-aws
+      - git secrets --scan
+      - echo "No vulnerabilites detected. Have a nice day!"
 EOF
   }
 
@@ -613,7 +572,6 @@ EOF
     compute_type    = var.build_compute_type
     image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = true
   }
 }
 
@@ -635,16 +593,20 @@ resource "aws_codebuild_project" "trivy" {
     buildspec = <<EOF
 version: 0.2
 phases:
+  install:
+    commands:
+      - apt update -y
+      - apt-get install wget apt-transport-https gnupg lsb-release -y
+      - wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+      - echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee -a /etc/apt/sources.list.d/trivy.list
+      - apt update -y
+      - apt-get install trivy -y
   build:
-    steps:
-      - name: Build local image
-        run: |
-          docker build -t app:local .
-      - name: Run Trivy Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: app:local
-          format: 'table'
+    commands:
+      - docker build -t app:local .
+  post_build:
+    commands:
+      - trivy image app:local
 EOF
   }
 
@@ -683,10 +645,8 @@ phases:
       - pip3 install -r requirements.txt
       - pip3 install -r requirements-dev.txt
   build:
-    steps:
-      - name: PyLint
-        run: |
-          find . -name '*.py' | xargs pylint
+    commands:
+      - find . -name '*.py' ! -path './.env/*' ! -path './cdk.out/*' ! -path './node_modules/*' | xargs pylint
 EOF
   }
 
@@ -698,7 +658,6 @@ EOF
     compute_type    = var.build_compute_type
     image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = true
   }
 }
 
@@ -724,12 +683,10 @@ phases:
       - pip3 install -r requirements.txt
       - pip3 install -r requirements-dev.txt
   build:
-    steps:
-      - name: Run Unit Tests with coverage
-        run: |
-          coverage erase && python3 -m coverage run --branch -m pytest -v && coverage report
-          python3 -m coverage xml -i -o test-results/coverage.xml
-          python3 -m pytest --junitxml=test-results/results.xml
+    commands:
+      - coverage erase && python3 -m coverage run --branch -m pytest -v && coverage report
+      - python3 -m coverage xml -i -o test-results/coverage.xml
+      - python3 -m pytest --junitxml=test-results/results.xml
 reports:
   unit_tests_reports:
     files: results.xml
@@ -771,30 +728,31 @@ resource "aws_codebuild_project" "ecr_push" {
     buildspec = <<EOF
 version: 0.2
 phases:
+  install:
+    commands:
+      - pip3 install -r requirements.txt
+      - pip3 install -r requirements-dev.txt
   pre_build:
     commands:
       - echo Logging in to Amazon ECR...
       - ACCOUNT=$(aws sts get-caller-identity | jq -r '.Account')
       - ECR_URL=$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com
       - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_URL
+  build:
+    commands:
+      - echo Building the Docker image...
+      - docker build -t local:latest $FOLDER_PATH
+  post_build:
+    commands:
+      - echo Pushing the Docker image...
       - IMAGE_TAG=$(cat version.txt)
       - URI=$ECR_URL/$ECR_REPO_NAME:$IMAGE_TAG
-  build:
-    steps:
-      - name: Build docker image 
-        run: |
-          echo Building the Docker image...
-          docker build -t local:latest $FOLDER_PATH
-      - name: Tag and push image
-        run: |
-          echo Pushing the Docker image...
-          docker tag local:latest $URI
-          docker push $URI
-      - name: Create ECS config files
-        run: |
-          mkdir artifacts
-          printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$URI" > artifacts/imagedefinitions.json
-          cat artifacts/imagedefinitions.json
+      - docker tag local:latest $URI
+      - docker push $URI
+      - echo Generating ECS configuration files...
+      - mkdir artifacts
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$URI" > artifacts/imagedefinitions.json
+      - cat artifacts/imagedefinitions.json
 artifacts:
   files:
     - '**/*'
