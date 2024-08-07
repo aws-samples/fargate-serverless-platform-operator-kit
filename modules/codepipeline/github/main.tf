@@ -34,7 +34,6 @@ module "python_microservice_pipeline" {
   service_name                        = var.service_sample.name
   organization_name                   = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials.secret_string)["organization_name"]
   code_star_connection_arn            = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials.secret_string)["code_star_connection_arn"]
-  dockerhub_secret_name               = var.dockerhub_secret_name
 }
 
 ################################################################################

@@ -40,11 +40,6 @@ variable "repository_name" {
   description = "The repository name to use in CodePipeline source stage"
 }
 
-variable "dockerhub_secret_name" {
-  type        = string
-  description = "AWS Secrets Manager secret name for dockerhub credentials"
-}
-
 variable "service_sample" {
   description = "Parameter for Service Sample"
   type        = map(string)

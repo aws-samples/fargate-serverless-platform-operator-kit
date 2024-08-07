@@ -57,7 +57,6 @@ Configure the following parameters on **patterns/fargate-cluster/terraform.tfvar
 enable_codepipeline_github = true
 
 repository_name       = "my-example-app"
-dockerhub_secret_name = "/apps/docker/credentials"
 secret_manager_name   = "github"
 ```
 
