@@ -75,8 +75,3 @@ variable "organization_name" {
   type        = string
   description = "The Github organization name"
 }
-
-variable "dockerhub_secret_name" {
-  type        = string
-  description = "AWS Secrets Manager secret name for dockerhub credentials"
-}

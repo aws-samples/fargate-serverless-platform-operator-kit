@@ -286,7 +286,6 @@ module "codepipeline_github" {
 
   ecr_repository_name   = var.ecr_repository_name
   repository_name       = var.repository_name
-  dockerhub_secret_name = var.dockerhub_secret_name
   secret_manager_name   = var.secret_manager_name
   service_sample        = var.service_sample
   container_sample      = var.container_sample

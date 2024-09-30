@@ -129,5 +129,4 @@ datadog_integration_aws = {
 enable_codepipeline_github = false
 
 repository_name       = "my-example-app"
-dockerhub_secret_name = "/apps/docker/credentials"
 secret_manager_name   = "github"
