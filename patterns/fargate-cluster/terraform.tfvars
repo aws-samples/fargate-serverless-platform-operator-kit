@@ -103,10 +103,10 @@ aquasec_microenforcer_sidecar = {
 }
 
 secret_aquasec = {
-    aqua_url = "https://cloud.aquasec.com"
-    username = "username" 
-    password = "password"
-  }
+  aqua_url = "https://cloud.aquasec.com"
+  username = "username"
+  password = "password"
+}
 
 
 ################################################################################
@@ -136,8 +136,8 @@ secret_datadog = {
 
 enable_codepipeline_github = false
 
-repository_name       = "ecsdemo-python"
-secret_manager_name   = "github"
+repository_name     = "ecsdemo-python"
+secret_manager_name = "github"
 
 secret_github = {
   code_star_connection_arn = "arn:aws:codeconnections:us-east-1:xxxxxxxxx:connection/xxxxx-xxxx-xxxx-xxxx-xxxxxxxxx"

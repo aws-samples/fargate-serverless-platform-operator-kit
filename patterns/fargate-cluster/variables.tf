@@ -229,7 +229,7 @@ variable "repository_name" {
 variable "secret_github" {
   default = {
     code_star_connection_arn = "code_star_connection_arn"
-    organization_name = "organization_name"
+    organization_name        = "organization_name"
   }
 
   type = map(string)

@@ -226,7 +226,7 @@ module "datadog" {
 
   sns_topic_name_for_alerts = var.sns_topic_name_for_alerts
   datadog_integration_aws   = var.datadog_integration_aws
-  secret_datadog         = var.secret_datadog
+  secret_datadog            = var.secret_datadog
 
 }
 
@@ -243,10 +243,10 @@ module "codepipeline_github" {
   account      = var.account
   account_id   = data.aws_caller_identity.current.account_id
 
-  ecr_repository_name   = var.ecr_repository_name
-  repository_name       = var.repository_name
-  secret_manager_name   = var.secret_manager_name
-  service_sample        = var.service_sample
-  container_sample      = var.container_sample
-  secret_github         = var.secret_github
+  ecr_repository_name = var.ecr_repository_name
+  repository_name     = var.repository_name
+  secret_manager_name = var.secret_manager_name
+  service_sample      = var.service_sample
+  container_sample    = var.container_sample
+  secret_github       = var.secret_github
 }
