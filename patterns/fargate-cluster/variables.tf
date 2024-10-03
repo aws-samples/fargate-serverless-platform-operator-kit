@@ -105,6 +105,16 @@ variable "network" {
 # Module - Aquasec
 ################################################################################
 
+variable "secret_aquasec" {
+  default = {
+    aqua_url = "aqua_url"
+    username = "username"
+    password = "password"
+  }
+
+  type = map(string)
+}
+
 variable "enable_aquasec" {
   description = "Enable or Disable Aquasec Integration"
   type        = bool
@@ -164,6 +174,15 @@ variable "aquasec_microenforcer_sidecar" {
 # Module - Datadog
 ################################################################################
 
+variable "secret_datadog" {
+  default = {
+    datadog_api_key = "datadog_api_key"
+    datadog_app_key = "datadog_app_key"
+  }
+
+  type = map(string)
+}
+
 variable "enable_datadog" {
   description = "Enable or Disable Datadog Integration"
   type        = bool
@@ -205,6 +224,15 @@ variable "secret_manager_name" {
 variable "repository_name" {
   type        = string
   description = "The repository name to use in CodePipeline source stage"
+}
+
+variable "secret_github" {
+  default = {
+    code_star_connection_arn = "code_star_connection_arn"
+    organization_name = "organization_name"
+  }
+
+  type = map(string)
 }
 
 ################################################################################

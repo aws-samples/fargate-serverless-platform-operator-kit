@@ -1,13 +1,7 @@
 ## Monitoring Component - Datadog integration module
 
-The sensitive information for Datadog will be managed by AWS Secrets Manager, please create the following secret for the keys:
+The sensitive information for Datadog will be managed by AWS Secrets Manager.
 
-```shell
-aws secretsmanager create-secret \
-    --name datadog \
-    --description "Datadog Secrets" \
-    --secret-string "{\"datadog_api_key\":\"abc123.......\",\"datadog_app_key\":\"abc123........\"}"
-```
 - **datadog_api_key**: Should be the API Key created by your org on Datadog.
 - **datadot_app_key**: Should be the Application Key created by your org on Datadog.
 
@@ -20,19 +14,21 @@ Configure the following parameters on **patterns/fargate-cluster/terraform.tfvar
 # Module - Datadog
 ################################################################################
 
-enable_datadog = true
+enable_datadog = false  -----> true
 
 sns_topic_name_for_alerts = "sns-containters-ecs-topic-alerts"
-
-# Secret Manager Value Example
-# {"datadog_api_key":"XXXXXX","datadog_app_key":"XXXXX"}
 
 datadog_integration_aws = {
   roleName                           = "DatadogAWSIntegrationRole"
   alert_cpuutilization_threshold     = "80"
   alert_memory_utilization_threshold = "80"
   secret_manager_name                = "datadog"
-  external_id                        = "XXXXXX"
+  external_id                        = "XXXXXX" -----------> External ID Auth Datadog
+}
+
+secret_datadog = {
+  datadog_api_key = "datadog_api_key" -----------> Datadog API Key
+  datadog_app_key = "datadog_app_key" -----------> Datadog App Key
 }
 ```
 

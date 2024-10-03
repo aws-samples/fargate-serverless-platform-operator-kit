@@ -102,6 +102,12 @@ aquasec_microenforcer_sidecar = {
   memory_reservation = 50
 }
 
+secret_aquasec = {
+    aqua_url = "https://cloud.aquasec.com"
+    username = "username" 
+    password = "password"
+  }
+
 
 ################################################################################
 # Module - Datadog
@@ -111,9 +117,6 @@ enable_datadog = false
 
 sns_topic_name_for_alerts = "sns-containters-ecs-topic-alerts"
 
-# Secret Manager Value Example
-# {"datadog_api_key":"XXXXXX","datadog_app_key":"XXXXX"}
-
 datadog_integration_aws = {
   roleName                           = "DatadogAWSIntegrationRole"
   alert_cpuutilization_threshold     = "80"
@@ -122,11 +125,21 @@ datadog_integration_aws = {
   external_id                        = "XXXXXX"
 }
 
+secret_datadog = {
+  datadog_api_key = "datadog_api_key"
+  datadog_app_key = "datadog_app_key"
+}
+
 ################################################################################
 # Module - Codepipeline with Github
 ################################################################################
 
 enable_codepipeline_github = false
 
-repository_name       = "my-example-app"
+repository_name       = "ecsdemo-python"
 secret_manager_name   = "github"
+
+secret_github = {
+  code_star_connection_arn = "arn:aws:codeconnections:us-east-1:xxxxxxxxx:connection/xxxxx-xxxx-xxxx-xxxx-xxxxxxxxx"
+  organization_name        = "xxxxxxxx"
+}
