@@ -34,12 +34,11 @@ variable "datadog_integration_aws" {
   }
 }
 
-variable "api_key" {
-  description = "Datadog API Key"
-  type        = string
-}
+variable "secret_datadog" {
+  default = {
+    datadog_api_key = "datadog_api_key"
+    datadog_app_key = "datadog_app_key"
+  }
 
-variable "app_key" {
-  description = "Datadog APP Key"
-  type        = string
+  type = map(string)
 }

@@ -9,7 +9,7 @@ provider "aquasec" {
 }
 
 ################################################################################
-# Supply Chain
+# Integration Registry
 ################################################################################
 
 resource "aquasec_integration_registry" "integration_registry" {

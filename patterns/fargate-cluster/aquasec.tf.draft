@@ -1,0 +1,29 @@
+################################################################################
+# Module - Aquasec
+################################################################################
+
+resource "aws_secretsmanager_secret" "aquasec" {
+  name                    = "aquasec"
+  description             = "AquaSec Secrets"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "aquasec_version" {
+  secret_id     = aws_secretsmanager_secret.aquasec.id
+  secret_string = jsonencode(var.secret_aquasec)
+}
+
+# Aquasec
+module "aquasec" {
+  source = "../../modules/aquasec"
+
+  enable_aquasec         = var.enable_aquasec
+  enable_aquasec_sidecar = var.enable_aquasec_sidecar_ecr_repository
+
+  account = var.account
+
+  aquasec_registry = var.aquasec_registry
+  username         = jsondecode(aws_secretsmanager_secret_version.aquasec_version.secret_string)["username"]
+  aqua_url         = jsondecode(aws_secretsmanager_secret_version.aquasec_version.secret_string)["aqua_url"]
+  password         = jsondecode(aws_secretsmanager_secret_version.aquasec_version.secret_string)["password"]
+}

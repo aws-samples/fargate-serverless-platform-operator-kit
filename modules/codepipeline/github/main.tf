@@ -1,11 +1,3 @@
-data "aws_secretsmanager_secret" "github" {
-  name = var.secret_manager_name
-}
-
-data "aws_secretsmanager_secret_version" "secret_credentials" {
-  secret_id = data.aws_secretsmanager_secret.github.id
-}
-
 ################################################################################
 # CodePipeline Artifacts Bucket
 ################################################################################
@@ -20,6 +12,17 @@ module "pipeline_artifacts_bucket" {
 # Microservice pipeline
 ################################################################################
 
+resource "aws_secretsmanager_secret" "github" {
+  name                    = var.secret_manager_name
+  description             = "Github Secrets"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "github_version" {
+  secret_id     = aws_secretsmanager_secret.github.id
+  secret_string = jsonencode(var.secret_github)
+}
+
 module "python_microservice_pipeline" {
   source                              = "./codepipeline_python"
   repository_name                     = var.repository_name
@@ -32,8 +35,8 @@ module "python_microservice_pipeline" {
   cluster_name                        = var.cluster_name
   container_name                      = var.container_sample.name
   service_name                        = var.service_sample.name
-  organization_name                   = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials.secret_string)["organization_name"]
-  code_star_connection_arn            = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials.secret_string)["code_star_connection_arn"]
+  organization_name                   = jsondecode(aws_secretsmanager_secret_version.github_version.secret_string)["organization_name"]
+  code_star_connection_arn            = jsondecode(aws_secretsmanager_secret_version.github_version.secret_string)["code_star_connection_arn"]
 }
 
 ################################################################################

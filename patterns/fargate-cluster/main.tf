@@ -13,26 +13,6 @@ locals {
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
 }
 
-# Aquasec
-
-data "aws_secretsmanager_secret" "aquasec" {
-  name = var.aquasec.secret_manager_name
-}
-
-data "aws_secretsmanager_secret_version" "secret_credentials_aquasec" {
-  secret_id = data.aws_secretsmanager_secret.aquasec.id
-}
-
-# Datadog
-
-data "aws_secretsmanager_secret" "datadog" {
-  name = var.datadog_integration_aws.secret_manager_name
-}
-
-data "aws_secretsmanager_secret_version" "secret_credentials_datadog" {
-  secret_id = data.aws_secretsmanager_secret.datadog.id
-}
-
 ################################################################################
 # ECS Cluster Fargate
 ################################################################################
@@ -85,6 +65,8 @@ module "ecs" {
       memory = var.service_sample.memory
 
       enable_execute_command = true
+
+      ignore_task_definition_changes = true
 
       # Container definition(s)
       container_definitions = merge(try({
@@ -152,7 +134,6 @@ module "ecs" {
           cidr_blocks = ["0.0.0.0/0"]
         }
       }
-
     }
   }
 
@@ -233,25 +214,6 @@ module "service_alb" {
 }
 
 ################################################################################
-# Module - Aquasec
-################################################################################
-
-# Aquasec
-module "aquasec" {
-  source = "../../modules/aquasec"
-
-  enable_aquasec         = var.enable_aquasec
-  enable_aquasec_sidecar = var.enable_aquasec_sidecar_ecr_repository
-
-  account = var.account
-
-  aquasec_registry = var.aquasec_registry
-  username         = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials_aquasec.secret_string)["username"]
-  aqua_url         = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials_aquasec.secret_string)["aqua_url"]
-  password         = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials_aquasec.secret_string)["password"]
-}
-
-################################################################################
 # Module - Datadog
 ################################################################################
 
@@ -264,12 +226,9 @@ module "datadog" {
 
   sns_topic_name_for_alerts = var.sns_topic_name_for_alerts
   datadog_integration_aws   = var.datadog_integration_aws
-
-  api_key = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials_datadog.secret_string)["datadog_api_key"]
-  app_key = jsondecode(data.aws_secretsmanager_secret_version.secret_credentials_datadog.secret_string)["datadog_app_key"]
+  secret_datadog            = var.secret_datadog
 
 }
-
 
 ################################################################################
 # Module - Codepipeline with Github
@@ -284,9 +243,10 @@ module "codepipeline_github" {
   account      = var.account
   account_id   = data.aws_caller_identity.current.account_id
 
-  ecr_repository_name   = var.ecr_repository_name
-  repository_name       = var.repository_name
-  secret_manager_name   = var.secret_manager_name
-  service_sample        = var.service_sample
-  container_sample      = var.container_sample
+  ecr_repository_name = var.ecr_repository_name
+  repository_name     = var.repository_name
+  secret_manager_name = var.secret_manager_name
+  service_sample      = var.service_sample
+  container_sample    = var.container_sample
+  secret_github       = var.secret_github
 }

@@ -1,19 +1,44 @@
 ## Security Component - AquaSec Integration module
 
-The sensitive information for AquaSec will be managed by AWS Secrets Manager, please create the following secret for the keys:
-
-```shell
-aws secretsmanager create-secret \
-    --name aquasec \
-    --description "AquaSec Secrets" \
-    --secret-string "{\"aqua_url\":\"abc123.......\",\"username\":\"abc123........\",\"password\":\"abc123........\"}"
-```
+The sensitive information for AquaSec will be managed by AWS Secrets Manager.
 
 - **aqua_url**: Should be the Aqua URL created by your account on AquaSec.
 - **username**: Should be the Username created by your account on AquaSec.
 - **password**: Should be the Password created by your account on AquaSec.
 
 For more information about AquaSec please check the [official docs](https://registry.terraform.io/providers/aquasecurity/aquasec/latest/docs).
+
+Go to **patterns/fargate-cluster/aquasec.tf.draft** and rename the file to **aquasec.tf**, after go to **patterns/fargate-cluster/terraform.tfvars** and configure the following parameters:
+
+```shell
+################################################################################
+# Module - Aquasec
+################################################################################
+
+enable_aquasec                        = false  -------> true
+enable_aquasec_sidecar                = false
+enable_aquasec_sidecar_ecr_repository = false
+
+aquasec = {
+  secret_manager_name = "aquasec"
+}
+
+aquasec_microenforcer_sidecar = {
+  name               = "aqua-sidecar"
+  cpu                = 512
+  memory             = 1024
+  essential          = false
+  image              = "xxxxxxxx.dkr.ecr.us-east-1.amazonaws.com/aqua-sidecar:latest"
+  memory_reservation = 50
+}
+
+secret_aquasec = {
+    aqua_url = "https://cloud.aquasec.com"
+    username = "username"  -------> Your username
+    password = "password"  -------> Your password
+  }
+
+```
 
 ### MicroEnforcer Sidecar (Vulnerabilities Scanning and Protection)
 
@@ -170,3 +195,18 @@ terraform validate
 terraform plan #Here check the plan that Terraform outputs in case you want to change something.
 terraform apply --auto-approve
 ```
+
+### Cleanup
+
+Rename **aquasec.tf** to **aquasec.tf.draft** and configure the following values:
+
+```shell
+################################################################################
+# Module - Aquasec
+################################################################################
+
+enable_aquasec                        = true  -------> false
+
+```
+
+

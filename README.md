@@ -7,60 +7,9 @@ AWS SPOK, known as an opinionated solution bundle, offers a robust technical sta
 
 ![Foundation Module v1](images/spok.png)
 
-## Pre-Requisites - Terraform
-
-### General
-
-The pre-requisites for deploying this offering are the following:
-
-* Dynamodb Table (A single DynamoDB table is used to lock multiple remote state files)
-* S3 Bucket (Stores the state as a given key in a given bucket)
-* [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) 
-
-In case you don't have it, use this CLI to create the DynamoDB table it:
-
-```shell
-  aws dynamodb create-table --table-name TerraformLockStates \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST --region us-east-1
-```
-
-That CLI will create a DynamoDB table on us-east-1 region with name TerraformLockStates and pay per request billing mode, the table will have a Hash Key called LockID
-
-Use this CLI to create the S3 bucket:
-
-```shell
-  account_id=$(aws sts get-caller-identity --query "Account" --output text) && \
-  aws s3api create-bucket --bucket ${account_id}-terraform-states \
-  --region us-east-1 --output text --no-cli-pager && aws s3api put-bucket-versioning \
-  --bucket ${account_id}-terraform-states --versioning-configuration Status=Enabled
-```
-
-That CLI will crete a private S3 Bucket with name AccountID-terraform-states with versioning enabled by default.
-
 ## Getting started
 
 To make it easy for you to get started with SPOK(Serverless Platform Operator Kit), here's a list of next steps. We are going to provision ECS Cluster with AWS Fargate, serverless compute engine for containers.
-
-### Configure Backend
-
-Go to your pattern and modify the following files:
-
-* **backend.tf**
-
-Replace the **bucket name** and **dynamodb_table**, if your region is different than us-east-1 also change **region**
-
-```
-terraform {
-  backend "s3" {
-    bucket         = "${account_id}-terraform-states" <--- here
-    ...
-    region         = "us-east-1" <--- here if your region is different than us-east-1
-    dynamodb_table = "TerraformLockStates" <--- here
-  }
-}
-```
 
 ### Deploy Your Pattern
 
@@ -103,38 +52,58 @@ terraform destroy
 
 Is possible that the deletion of the ECR Repository fails because there are images left on the repository, hence please delete manually the images and execute the command again.
 
-Delete secrets immediately, in case of schedule for deletion change the parameter ```--force-delete-without-recovery``` to ```--recovery-window-in-days 7```
+## Best Practices
+
+Terraform uses persisted state data to keep track of the resources it manages. You can either integrate with HCP Terraform to store state data or define a backend block to store state in a remote object. This lets multiple people access the state data and work together on that collection of infrastructure resources.
+
+* Dynamodb Table (A single DynamoDB table is used to lock multiple remote state files)
+* S3 Bucket (Stores the state as a given key in a given bucket)
+
+In case you don't have it, use this CLI to create the DynamoDB table it:
 
 ```shell
-aws secretsmanager delete-secret \
-    --secret-id datadog \
-    --force-delete-without-recovery
+  aws dynamodb create-table --table-name TerraformLockStates \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST --region us-east-1
 ```
 
+That CLI will create a DynamoDB table on us-east-1 region with name TerraformLockStates and pay per request billing mode, the table will have a Hash Key called LockID
+
+Use this CLI to create the S3 bucket:
+
 ```shell
-aws secretsmanager delete-secret \
-    --secret-id github \
-    --force-delete-without-recovery
+  account_id=$(aws sts get-caller-identity --query "Account" --output text) && \
+  aws s3api create-bucket --bucket ${account_id}-terraform-states \
+  --region us-east-1 --output text --no-cli-pager && aws s3api put-bucket-versioning \
+  --bucket ${account_id}-terraform-states --versioning-configuration Status=Enabled
 ```
 
-```shell
-aws secretsmanager delete-secret \
-    --secret-id /apps/docker/credentials \
-    --force-delete-without-recovery
+That CLI will crete a private S3 Bucket with name AccountID-terraform-states with versioning enabled by default.
+
+### Configure Backend
+
+Go to your pattern and create the following file:
+
+* **backend.tf**
+
+Replace the **bucket name** and **dynamodb_table**, if your region is different than us-east-1 also change **region**
+
+```
+terraform {
+  backend "s3" {
+    bucket         = "${account_id}-terraform-states" <--- here
+    ...
+    region         = "us-east-1" <--- here if your region is different than us-east-1
+    dynamodb_table = "TerraformLockStates" <--- here
+  }
+}
 ```
 
-Delete Dynamodb Table (**NOTE**: Remember to the disable deletion protection):
+After configuration, please run the following command:
 
 ```shell
-aws dynamodb delete-table \
-    --table-name TerraformLockStates
-```
-
-Delete S3 Bucket (**NOTE**: Remember first to emtpy the S3 Bucket):
-
-```shell
-account_id=$(aws sts get-caller-identity --query "Account" --output text)
-aws s3api delete-bucket --bucket ${account_id}-terraform-states --region us-east-1
+terraform init
 ```
 
 ## Troubleshooting

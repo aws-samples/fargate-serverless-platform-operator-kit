@@ -1,10 +1,25 @@
 # Configure the Datadog provider
 provider "datadog" {
-  api_key = var.api_key
-  app_key = var.app_key
+  api_key = try(jsondecode(aws_secretsmanager_secret_version.datadog_version[0].secret_string)["datadog_api_key"], "datadog_api_key")
+  app_key = try(jsondecode(aws_secretsmanager_secret_version.datadog_version[0].secret_string)["datadog_app_key"], "datadog_app_key")
+  validate = var.enable_datadog
+}
+
+resource "aws_secretsmanager_secret" "datadog" {
+  count   = var.enable_datadog ? 1 : 0
+  name                    = "datadog"
+  description             = "Datadog Secrets"
+  recovery_window_in_days = 0
+}
+
+resource "aws_secretsmanager_secret_version" "datadog_version" {
+  count   = var.enable_datadog ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.datadog[0].id
+  secret_string = jsonencode(var.secret_datadog)
 }
 
 data "aws_iam_policy_document" "datadog_aws_integration_assume_role" {
+  count   = var.enable_datadog ? 1 : 0
   statement {
     actions = ["sts:AssumeRole"]
 
@@ -24,6 +39,7 @@ data "aws_iam_policy_document" "datadog_aws_integration_assume_role" {
 }
 
 data "aws_iam_policy_document" "datadog_aws_integration" {
+  count   = var.enable_datadog ? 1 : 0
   #checkov:skip=CKV_AWS_111:Datadog required permissions:https://docs.datadoghq.com/integrations/amazon_web_services/#aws-iam-permissions.
   #checkov:skip=CKV_AWS_356:Datadog required permissions:https://docs.datadoghq.com/integrations/amazon_web_services/#aws-iam-permissions.
   statement {
@@ -109,19 +125,22 @@ data "aws_iam_policy_document" "datadog_aws_integration" {
 
 
 resource "aws_iam_policy" "datadog_aws_integration" {
+  count   = var.enable_datadog ? 1 : 0
   name   = "DatadogAWSIntegrationPolicy"
-  policy = data.aws_iam_policy_document.datadog_aws_integration.json
+  policy = data.aws_iam_policy_document.datadog_aws_integration[0].json
 }
 
 resource "aws_iam_role" "datadog_aws_integration" {
+  count   = var.enable_datadog ? 1 : 0
   name               = var.datadog_integration_aws.roleName
   description        = "Role for Datadog AWS Integration"
-  assume_role_policy = data.aws_iam_policy_document.datadog_aws_integration_assume_role.json
+  assume_role_policy = data.aws_iam_policy_document.datadog_aws_integration_assume_role[0].json
 }
 
 resource "aws_iam_role_policy_attachment" "datadog_aws_integration" {
-  role       = aws_iam_role.datadog_aws_integration.name
-  policy_arn = aws_iam_policy.datadog_aws_integration.arn
+  count   = var.enable_datadog ? 1 : 0
+  role       = aws_iam_role.datadog_aws_integration[0].name
+  policy_arn = aws_iam_policy.datadog_aws_integration[0].arn
 }
 
 
